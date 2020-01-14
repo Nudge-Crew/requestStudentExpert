@@ -11,20 +11,60 @@ app = Flask(__name__)
 # Add "self" parameter when working with Google Cloud.
 #@app.route('/requestStudentExpert', methods=['POST'])
 def requestStudentExperts(request):
-    jsonobject = request.get_json();
-    access_token = request.headers.get('X-Canvas-Authorization');
-    canvas.translate_access_token(access_token);
 
+    #sets headers for cors
+    headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'Content-Type, x-canvas-authorization '
+    }
+    if request.method == 'OPTIONS':
+        return '', 204, headers
+
+    headers = {
+        'Access-Control-Allow-Origin': '*'
+    }
+
+    #read json from request
+    jsonobject = request.get_json("force=true")
+
+    #calling canvas user account
+    access_token = request.headers.get('X-Canvas-Authorization');
+    canvas.translate_access_token(access_token)
     result = canvas.call(access_token, "users/self", MultiDict())
     decoded_response = json.loads(result)
+    #get user id
     id = decoded_response['message']['id']
-    kpi = jsonobject.get("KPI")
-    description = "test"
+
+    #get outcomeId
+    courseId = jsonobject["courseId"]
+    rubricId = jsonobject["rubricId"]
+    outcomeId = jsonobject["outcomeId"]
+    str = f"courses/{courseId}/rubrics/{rubricId}";
+    rubric = canvas.call(access_token, str, MultiDict())
+    decoded_response = json.loads(rubric)
+
+    #get outcome from rubric
+    outcomes = decoded_response['message']['data']
+    foundOutcome = None;
+    for i in range(len(outcomes)):
+        if outcomes[i]["id"] == outcomeId:
+            foundOutcome = outcomes[i]
+
+    #find not empty description
+    for i in range(len(foundOutcome['ratings'])):
+        temp = foundOutcome['ratings'][i]['long_description']
+        if temp != '':
+            description = temp;
+
+
+    #connect and commit to database
     conn = psycopg2.connect(os.environ.get('DATABASE_URI'))
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO public.expertrequest(userId,KPI,description) values(%s,%s,%s);", (id, kpi, description))
+    cursor.execute("INSERT INTO public.expertrequest(userId,KPI,description) values(%s,%s,%s);", (id, foundOutcome['description'] ,description))
     conn.commit()
     cursor.close()
     conn.close()
-    print(id)
-    return kpi
+
+    #return succes
+    return "succes",200, headers
