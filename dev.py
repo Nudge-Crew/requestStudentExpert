@@ -11,6 +11,8 @@ app.init(debug=IS_DEV)
 
 from app.functions.addUser import *
 from app.functions.requestStudentExperts import *
+from app.functions.getStudentExpertRequests import *
+from app.functions.addUserCPIs import *
 
 if IS_DEV:
     from flask import Flask, request
@@ -24,7 +26,9 @@ if IS_DEV:
 
     functions = [
         'addUser',
-        'requestStudentExperts'
+        'requestStudentExperts',
+        'getStudentExpertRequests',
+        'addUserCPIs'
         ]
     # app.add_url_rule(f'/test_message', 'test_message', test_message, methods=['POST', 'GET'], defaults={'request': request})
     for function in functions:

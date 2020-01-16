@@ -9,6 +9,18 @@ import psycopg2
 
 #@app.route('/addUser', methods=['GET'])
 def addUser(request):
+    # sets headers for cors
+    headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET',
+        'Access-Control-Allow-Headers': 'Content-Type, x-canvas-authorization '
+    }
+    if request.method == 'OPTIONS':
+        return '', 204, headers
+
+    headers = {
+        'Access-Control-Allow-Origin': '*'
+    }
     access_token = request.headers.get('X-Canvas-Authorization')
     canvas.translate_access_token(access_token)
     result = canvas.call(access_token, "/users/self", MultiDict())

@@ -5,7 +5,7 @@ import json
 import os
 import psycopg2
 
-app = Flask(__name__)
+
 
 
 # Add "self" parameter when working with Google Cloud.
@@ -61,8 +61,11 @@ def requestStudentExperts(request):
     #connect and commit to database
     conn = psycopg2.connect(os.environ.get('DATABASE_URI'))
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO public.expertrequest(userId,KPI,description) values(%s,%s,%s);", (id, foundOutcome['description'] ,description))
-    conn.commit()
+    cursor.execute("SELECT * FROM public.expertrequest WHERE userId=%s AND KPI=%s;", (id, foundOutcome['description']))
+    expertRequest = cursor.fetchone()
+    if expertRequest is None:
+        cursor.execute("INSERT INTO public.expertrequest(userId,KPI,description) values(%s,%s,%s);", (id, foundOutcome['description'] ,description))
+        conn.commit()
     cursor.close()
     conn.close()
 
