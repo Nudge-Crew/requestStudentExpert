@@ -4,7 +4,7 @@ from werkzeug.datastructures import MultiDict
 import json
 import os
 import psycopg2
-
+import psycopg2.extras
 
 
 
@@ -15,7 +15,7 @@ def getStudentExpertRequests(request):
     #sets headers for cors
     headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Methods': 'GET',
         'Access-Control-Allow-Headers': 'Content-Type, x-canvas-authorization '
     }
     if request.method == 'OPTIONS':
@@ -36,12 +36,22 @@ def getStudentExpertRequests(request):
 
 
     #connect and commit to database
-    conn = psycopg2.connect(os.environ.get('DATABASE_URI'))
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM public.expertrequest WHERE userId=%s;", id)
-    expertRequests = cursor.fetchall()
+    conn = psycopg2.connect(os.environ.get('DATABASE_URI'), cursor_factory=psycopg2.extras.DictCursor)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute("SELECT userId, kpi, description, id FROM public.expertrequest WHERE userId=%s;", [id])
+    expertRequests = []
+    for row in cursor:
+        print(row)
+        dict = {
+            "userId": row[0],
+            "kpi": row[1],
+            "description": row[2],
+            "id": row[3]
+        }
+        expertRequests.append(dict)
     cursor.close()
     conn.close()
+
 
     #return succes
     return jsonify(expertRequests),200, headers

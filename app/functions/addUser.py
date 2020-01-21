@@ -27,7 +27,7 @@ def addUser(request):
     decoded_response = json.loads(result)
     id = decoded_response['message']['id']
     conn = psycopg2.connect(os.environ.get('DATABASE_URI'))
-    cursor = conn.cursor();
+    cursor = conn.cursor()
     cursor.execute("SELECT * FROM public.user WHERE id=%s;", [id])
     user = cursor.fetchone()
     if user is None:

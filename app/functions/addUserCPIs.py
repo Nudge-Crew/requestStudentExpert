@@ -1,8 +1,7 @@
 import os
-
+import requests
 import canvas_api_caller as canvas
 import psycopg2
-from flask import Flask, jsonify, request
 from werkzeug.datastructures import MultiDict
 import json
 
@@ -45,8 +44,6 @@ def addUserCPIs(request):
         pageCounter+=1
         decoded_response = json.loads(result)
         if decoded_response['message'] != []:
-            print(pageCounter)
-            print(decoded_response)
             unfiltererd.extend(decoded_response['message'])
         else:
             done = True
@@ -55,12 +52,11 @@ def addUserCPIs(request):
     conn = psycopg2.connect(os.environ.get('DATABASE_URI'))
     cursor = conn.cursor()
     for cpi in CPIs:
-        #cursor.execute(f"SELECT * FROM public.cpi WHERE id={cpi.id}")
-        cursor.execute("INSERT INTO public.cpi(id,userId,kpi,description) values(%s,%s,%s,%s) ON CONFLICT DO NOTHING;",(cpi[0],userId, cpi[1], cpi[2]))
+        context = call_emotion_api(CPIs)
+        cursor.execute("INSERT INTO public.cpi(id,userId,kpi,description,context) values(%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING;",(cpi[0],userId, cpi[1], cpi[2], context))
     conn.commit()
     cursor.close()
     conn.close()
-
 
     return "okay", 200, headers
 
@@ -89,9 +85,29 @@ def filterKPIs(unfiltered):
                 if(ratingAdded == False):
                     print("added")
                     cpiDescription = cpi['ratings'][1]['description']
-                    CPIs.append((id,kpidescription,cpiDescription) )
-
-
-
-
+                    CPIs.append((id,kpidescription,cpiDescription))
     return CPIs
+
+def call_emotion_api(content):
+    default_emotion_api_url = 'https://us-central1-school-230709.cloudfunctions.net/translate_data'
+
+    data = {
+        "data": content
+    }
+
+    headers = {
+        'Content-Type': 'application/json'
+    }
+
+    url = requests.post(
+        os.environ.get('EMOTION_API_URL', default_emotion_api_url),
+        json=data,
+        headers=headers
+    )
+
+    if url.status_code is 500:
+        return {
+            "error": "Unable to read emotions from text"
+        }
+
+    return url.json()
